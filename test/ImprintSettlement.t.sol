@@ -137,7 +137,7 @@ contract ImprintSettlementTest is Deployers {
         assertEq(uint256(status), uint256(ImprintHook.ReceiptStatus.Settled));
     }
 
-    function test_reversedMovementDonatesRequiredBondToLPs() public {
+    function test_reversedMovementQueuesRequiredBondForLPs() public {
         protectedRouter.protectedSwapExactInput(largeSwapParams(true, DECLARED_BOND));
         protectedRouter.protectedSwapExactInput(largeSwapParams(false, DECLARED_BOND));
         (uint64 settleBlock,, uint256 requiredBond,) = receiptState();
@@ -146,8 +146,8 @@ contract ImprintSettlementTest is Deployers {
         vm.roll(settleBlock);
         hook.settleReceipt(firstReceiptId(), key);
         assertEq(token0.balanceOf(address(this)), traderBalanceBefore + (DECLARED_BOND - requiredBond));
-        assertEq(token0.balanceOf(address(manager)), managerBalanceBefore + requiredBond);
-        assertEq(token0.balanceOf(address(hook)), 0);
+        assertEq(token0.balanceOf(address(manager)), managerBalanceBefore);
+        assertEq(token0.balanceOf(address(hook)), requiredBond);
     }
 
     function test_expiryForfeitsRequiredBondAndRefundsExcess() public {
@@ -158,7 +158,7 @@ contract ImprintSettlementTest is Deployers {
         vm.roll(uint256(expiryBlock) + 1);
         hook.expireReceipt(firstReceiptId(), key);
         assertEq(token0.balanceOf(address(this)), traderBalanceBefore + (DECLARED_BOND - requiredBond));
-        assertEq(token0.balanceOf(address(manager)), managerBalanceBefore + requiredBond);
+        assertEq(token0.balanceOf(address(manager)), managerBalanceBefore);
         (,,, ImprintHook.ReceiptStatus status) = receiptState();
         assertEq(uint256(status), uint256(ImprintHook.ReceiptStatus.Expired));
     }
@@ -198,5 +198,114 @@ contract ImprintSettlementTest is Deployers {
 
         assertEq(token0.balanceOf(address(this)), traderBalanceBefore + DECLARED_BOND);
         assertEq(token0.balanceOf(keeper), keeperBalanceBefore);
+    }
+
+    function test_smallSwapIsIndividuallyBelowThreshold() public {
+        ImprintProtectedRouter.ExactInputParams memory params = largeSwapParams(true, 0);
+        params.amountIn = 2e15;
+
+        protectedRouter.protectedSwapExactInput(params);
+
+        (,,, int24 referenceTick, int24 impactTick,,,, uint256 requiredBond,) = hook.receipts(firstReceiptId());
+
+        assertLe(int256(referenceTick - impactTick), int256(uint256(hook.IMPACT_THRESHOLD_TICKS())));
+        assertEq(requiredBond, 0);
+    }
+
+    function receiptIdFor(address trader, uint256 nonce) internal view returns (bytes32) {
+        return keccak256(abi.encode(key.toId(), trader, nonce));
+    }
+
+    function test_splitSwapsCannotBypassImpactThreshold() public {
+        ImprintProtectedRouter.ExactInputParams memory params = largeSwapParams(true, 0);
+        params.amountIn = 2e15;
+
+        protectedRouter.protectedSwapExactInput(params);
+
+        vm.expectRevert();
+        protectedRouter.protectedSwapExactInput(params);
+
+        assertEq(protectedRouter.nonces(address(this)), 1);
+
+        (,, uint256 cumulativeNotional, uint256 securedBond) = hook.impactWindows(key.toId(), true);
+
+        assertEq(cumulativeNotional, 2e15);
+        assertEq(securedBond, 0);
+
+        params.bondAmount = DECLARED_BOND;
+        protectedRouter.protectedSwapExactInput(params);
+
+        (,,,,,,,, uint256 requiredBond,) = hook.receipts(receiptIdFor(address(this), 1));
+
+        assertGt(requiredBond, 0);
+        assertEq(protectedRouter.nonces(address(this)), 2);
+    }
+
+    function test_splitResistanceIsGlobalAcrossTraders() public {
+        ImprintProtectedRouter.ExactInputParams memory params = largeSwapParams(true, 0);
+        params.amountIn = 2e15;
+
+        protectedRouter.protectedSwapExactInput(params);
+
+        address alice = makeAddr("splitter");
+        deal(address(token0), alice, 3e15);
+
+        vm.startPrank(alice);
+        token0.approve(address(protectedRouter), type(uint256).max);
+
+        vm.expectRevert();
+        protectedRouter.protectedSwapExactInput(params);
+        vm.stopPrank();
+
+        assertEq(protectedRouter.nonces(alice), 0);
+        assertEq(protectedRouter.nonces(address(this)), 1);
+    }
+
+    function test_impactWindowResetsAfterCooldown() public {
+        ImprintProtectedRouter.ExactInputParams memory params = largeSwapParams(true, 0);
+        params.amountIn = 2e15;
+
+        protectedRouter.protectedSwapExactInput(params);
+
+        vm.roll(block.number + hook.ACCUMULATION_BLOCKS() + 1);
+
+        params.deadlineBlock = block.number;
+        protectedRouter.protectedSwapExactInput(params);
+
+        (, uint64 startBlock, uint256 cumulativeNotional, uint256 securedBond) = hook.impactWindows(key.toId(), true);
+
+        assertEq(startBlock, block.number);
+        assertEq(cumulativeNotional, 2e15);
+        assertEq(securedBond, 0);
+        assertEq(protectedRouter.nonces(address(this)), 2);
+    }
+
+    function test_forfeitureIsReleasedInCooldownSlices() public {
+        protectedRouter.protectedSwapExactInput(largeSwapParams(true, DECLARED_BOND));
+        protectedRouter.protectedSwapExactInput(largeSwapParams(false, DECLARED_BOND));
+
+        (uint64 settleBlock,, uint256 requiredBond,) = receiptState();
+        vm.roll(settleBlock);
+        hook.settleReceipt(firstReceiptId(), key);
+
+        (uint256 reserve, uint64 lastBlock) = hook.donationStreams(key.toId(), address(token0));
+        assertEq(reserve, requiredBond);
+        assertEq(lastBlock, settleBlock);
+
+        uint256 nextBlock = uint256(lastBlock) + hook.DONATION_COOLDOWN_BLOCKS();
+        vm.expectRevert(abi.encodeWithSelector(ImprintHook.DonationCooldown.selector, block.number, nextBlock));
+        hook.dripDonation(key, address(token0));
+
+        vm.roll(nextBlock);
+        uint256 managerBefore = token0.balanceOf(address(manager));
+        uint256 expectedSlice = requiredBond * hook.DONATION_SLICE_BPS() / 10_000;
+        uint256 donated = hook.dripDonation(key, address(token0));
+
+        assertEq(donated, expectedSlice);
+        assertEq(token0.balanceOf(address(manager)), managerBefore + expectedSlice);
+
+        (reserve, lastBlock) = hook.donationStreams(key.toId(), address(token0));
+        assertEq(reserve, requiredBond - expectedSlice);
+        assertEq(lastBlock, block.number);
     }
 }
