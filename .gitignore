@@ -1,0 +1,13 @@
+# Foundry build output
+cache/
+out/
+broadcast/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Local tooling
+.vscode/
+.DS_Store
