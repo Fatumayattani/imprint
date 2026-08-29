@@ -34,6 +34,9 @@ contract ImprintHook is BaseHook {
 
     uint64 public constant OBSERVATION_BLOCKS = 20;
     uint64 public constant SETTLEMENT_BLOCKS = 100;
+    uint64 public constant ACCUMULATION_BLOCKS = 5;
+    uint64 public constant DONATION_COOLDOWN_BLOCKS = 5;
+    uint16 public constant DONATION_SLICE_BPS = 1_000;
 
     address public immutable trustedRouter;
 
@@ -62,6 +65,18 @@ contract ImprintHook is BaseHook {
         bool active;
     }
 
+    struct PoolImpactWindow {
+        int24 anchorTick;
+        uint64 startBlock;
+        uint256 cumulativeNotional;
+        uint256 securedBond;
+    }
+
+    struct DonationStream {
+        uint256 reserve;
+        uint64 lastDonationBlock;
+    }
+
     struct DonationData {
         PoolKey key;
         address bondToken;
@@ -71,6 +86,9 @@ contract ImprintHook is BaseHook {
     mapping(bytes32 receiptId => BondReceipt receipt) public receipts;
 
     mapping(bytes32 receiptId => PendingObservation observation) private pendingObservations;
+
+    mapping(PoolId poolId => mapping(bool zeroForOne => PoolImpactWindow window)) public impactWindows;
+    mapping(PoolId poolId => mapping(address bondToken => DonationStream stream)) public donationStreams;
 
     error InvalidTrustedRouter();
     error UnauthorizedRouter(address sender);
@@ -85,6 +103,23 @@ contract ImprintHook is BaseHook {
     error SettlementWindowClosed(uint256 currentBlock, uint256 expiryBlock);
     error ExpiryNotReached(uint256 currentBlock, uint256 expiryBlock);
     error PoolKeyMismatch(PoolId expected, PoolId actual);
+    error NoDonationReserve(PoolId poolId, address bondToken);
+    error DonationCooldown(uint256 currentBlock, uint256 nextBlock);
+    error InvalidDonationToken(address bondToken);
+
+    event DonationQueued(PoolId indexed poolId, address indexed bondToken, uint256 amount, uint256 reserve);
+
+    event DonationDripped(PoolId indexed poolId, address indexed bondToken, uint256 amount, uint256 remainingReserve);
+
+    event ImpactWindowUpdated(
+        PoolId indexed poolId,
+        bool indexed zeroForOne,
+        int24 anchorTick,
+        int24 currentTick,
+        uint256 cumulativeNotional,
+        uint256 aggregateRequiredBond,
+        uint256 marginalRequiredBond
+    );
 
     event BondReceiptCreated(
         bytes32 indexed receiptId,
@@ -129,6 +164,40 @@ contract ImprintHook is BaseHook {
         });
     }
 
+    function dripDonation(PoolKey calldata key, address bondToken) external returns (uint256 amount) {
+        PoolId poolId = key.toId();
+
+        bool isCurrency0 = Currency.unwrap(key.currency0) == bondToken;
+        bool isCurrency1 = Currency.unwrap(key.currency1) == bondToken;
+
+        if (!isCurrency0 && !isCurrency1) {
+            revert InvalidDonationToken(bondToken);
+        }
+
+        DonationStream storage stream = donationStreams[poolId][bondToken];
+
+        if (stream.reserve == 0) {
+            revert NoDonationReserve(poolId, bondToken);
+        }
+
+        uint256 nextBlock = uint256(stream.lastDonationBlock) + DONATION_COOLDOWN_BLOCKS;
+
+        if (block.number < nextBlock) {
+            revert DonationCooldown(block.number, nextBlock);
+        }
+
+        (amount,) = ImpactBondMath.settlementAmounts(stream.reserve, DONATION_SLICE_BPS);
+
+        if (amount == 0) amount = 1;
+
+        stream.reserve -= amount;
+        stream.lastDonationBlock = block.number.toUint64();
+
+        poolManager.unlock(abi.encode(DonationData({ key: key, bondToken: bondToken, amount: amount })));
+
+        emit DonationDripped(poolId, bondToken, amount, stream.reserve);
+    }
+
     function settleReceipt(bytes32 id, PoolKey calldata key) external {
         BondReceipt storage receipt = receipts[id];
 
@@ -147,7 +216,7 @@ contract ImprintHook is BaseHook {
 
         uint16 persistedBps = ImpactBondMath.persistenceBps(receipt.referenceTick, receipt.impactTick, settlementTick);
 
-        _finalize(id, receipt, key, persistedBps, ReceiptStatus.Settled);
+        _finalize(id, receipt, persistedBps, ReceiptStatus.Settled);
     }
 
     function expireReceipt(bytes32 id, PoolKey calldata key) external {
@@ -160,7 +229,7 @@ contract ImprintHook is BaseHook {
             revert ExpiryNotReached(block.number, receipt.expiryBlock);
         }
 
-        _finalize(id, receipt, key, 0, ReceiptStatus.Expired);
+        _finalize(id, receipt, 0, ReceiptStatus.Expired);
     }
 
     function unlockCallback(bytes calldata rawData) external onlyPoolManager returns (bytes memory) {
@@ -240,10 +309,10 @@ contract ImprintHook is BaseHook {
         int24 referenceTick,
         int24 impactTick
     ) private {
-        uint24 impactTicks = ImpactBondMath.tickDistance(referenceTick, impactTick);
+        uint256 notional = SafeCast.toUint256(-params.amountSpecified);
 
-        uint256 requiredBond =
-            ImpactBondMath.bondAmount(SafeCast.toUint256(-params.amountSpecified), impactTicks, bondCurve());
+        (uint256 requiredBond, int24 anchorTick) =
+            _updateImpactWindow(key.toId(), params.zeroForOne, referenceTick, impactTick, notional);
 
         if (data.bondAmount < requiredBond) {
             revert InsufficientBond(requiredBond, data.bondAmount);
@@ -253,7 +322,7 @@ contract ImprintHook is BaseHook {
         receipt.trader = data.trader;
         receipt.bondToken = data.bondToken;
         receipt.poolId = key.toId();
-        receipt.referenceTick = referenceTick;
+        receipt.referenceTick = anchorTick;
         receipt.impactTick = impactTick;
         receipt.settleBlock = (block.number + OBSERVATION_BLOCKS).toUint64();
         receipt.expiryBlock = (uint256(receipt.settleBlock) + SETTLEMENT_BLOCKS).toUint64();
@@ -262,6 +331,58 @@ contract ImprintHook is BaseHook {
         receipt.status = ReceiptStatus.Pending;
 
         _emitReceiptCreated(id, receipt);
+    }
+
+    function _updateImpactWindow(
+        PoolId poolId,
+        bool zeroForOne,
+        int24 referenceTick,
+        int24 currentTick,
+        uint256 notional
+    ) private returns (uint256 marginalRequiredBond, int24 anchorTick) {
+        PoolImpactWindow storage window = impactWindows[poolId][zeroForOne];
+
+        if (window.cumulativeNotional == 0 || block.number > uint256(window.startBlock) + ACCUMULATION_BLOCKS) {
+            window.anchorTick = referenceTick;
+            window.startBlock = block.number.toUint64();
+            window.cumulativeNotional = 0;
+            window.securedBond = 0;
+        }
+
+        window.cumulativeNotional += notional;
+        anchorTick = window.anchorTick;
+
+        uint24 cumulativeImpactTicks = ImpactBondMath.tickDistance(anchorTick, currentTick);
+
+        uint256 aggregateRequiredBond =
+            ImpactBondMath.bondAmount(window.cumulativeNotional, cumulativeImpactTicks, bondCurve());
+
+        if (aggregateRequiredBond > window.securedBond) {
+            marginalRequiredBond = aggregateRequiredBond - window.securedBond;
+            window.securedBond = aggregateRequiredBond;
+        }
+
+        emit ImpactWindowUpdated(
+            poolId,
+            zeroForOne,
+            anchorTick,
+            currentTick,
+            window.cumulativeNotional,
+            aggregateRequiredBond,
+            marginalRequiredBond
+        );
+    }
+
+    function _queueDonation(PoolId poolId, address bondToken, uint256 amount) private {
+        DonationStream storage stream = donationStreams[poolId][bondToken];
+
+        if (stream.reserve == 0) {
+            stream.lastDonationBlock = block.number.toUint64();
+        }
+
+        stream.reserve += amount;
+
+        emit DonationQueued(poolId, bondToken, amount, stream.reserve);
     }
 
     function _emitReceiptCreated(bytes32 id, BondReceipt storage receipt) private {
@@ -315,13 +436,9 @@ contract ImprintHook is BaseHook {
         }
     }
 
-    function _finalize(
-        bytes32 id,
-        BondReceipt storage receipt,
-        PoolKey calldata key,
-        uint16 persistedBps,
-        ReceiptStatus finalStatus
-    ) private {
+    function _finalize(bytes32 id, BondReceipt storage receipt, uint16 persistedBps, ReceiptStatus finalStatus)
+        private
+    {
         (uint256 requiredRefund, uint256 lpDonation) =
             ImpactBondMath.settlementAmounts(receipt.requiredBond, persistedBps);
 
@@ -336,7 +453,7 @@ contract ImprintHook is BaseHook {
         }
 
         if (lpDonation != 0) {
-            poolManager.unlock(abi.encode(DonationData({ key: key, bondToken: receipt.bondToken, amount: lpDonation })));
+            _queueDonation(receipt.poolId, receipt.bondToken, lpDonation);
         }
 
         emit BondReceiptFinalized(id, finalStatus, persistedBps, traderRefund, lpDonation);
