@@ -182,7 +182,6 @@ footer {
   padding-right: 24px;
 }
 
-.eyebrow,
 .section-label {
   color: var(--orange);
   font-size: 0.73rem;
@@ -191,27 +190,20 @@ footer {
   text-transform: uppercase;
 }
 
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  margin-bottom: 24px;
-}
-
 .hero-copy h1 {
   max-width: 760px;
   margin: 0;
   color: var(--graphite);
-  font-family: "Instrument Serif", serif;
-  font-size: clamp(4.3rem, 6.4vw, 7.6rem);
-  font-weight: 400;
-  line-height: 0.84;
-  letter-spacing: -0.045em;
+  font-family: "Fraunces", serif;
+  font-size: clamp(4rem, 5.9vw, 7rem);
+  font-weight: 500;
+  line-height: 0.9;
+  letter-spacing: -0.055em;
 }
 
 .hero-copy h1 span {
   display: block;
-  color: var(--orange);
+  color: var(--blue);
   font-style: italic;
 }
 
@@ -221,46 +213,6 @@ footer {
   color: #4e4a42;
   font-size: clamp(1rem, 1.35vw, 1.2rem);
   line-height: 1.7;
-}
-
-.hero-proof {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 42px;
-}
-
-.hero-proof div {
-  min-width: 128px;
-  padding: 14px 16px;
-  border-left: 3px solid var(--graphite);
-  background: rgba(255, 255, 255, 0.38);
-}
-
-.hero-proof div:nth-child(2) {
-  border-color: var(--orange);
-}
-
-.hero-proof div:nth-child(3) {
-  border-color: var(--verdigris);
-}
-
-.hero-proof strong,
-.hero-proof span {
-  display: block;
-}
-
-.hero-proof strong {
-  font-family: "Instrument Serif", serif;
-  font-size: 1.8rem;
-  font-weight: 400;
-}
-
-.hero-proof span {
-  margin-top: 3px;
-  color: var(--muted);
-  font-size: 0.68rem;
-  text-transform: uppercase;
 }
 
 .swap-card,
@@ -821,6 +773,99 @@ footer > a {
   transform-origin: left center;
 }
 
+
+
+.hero-impact-trace {
+  width: min(100%, 590px);
+  margin-top: 38px;
+  padding: 16px 20px 13px;
+  border: 1px solid var(--line);
+  background: rgba(255, 250, 241, 0.58);
+}
+
+.hero-impact-trace svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.trace-baseline,
+.trace-path {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.trace-baseline {
+  stroke: rgba(23, 23, 19, 0.16);
+  stroke-width: 2;
+  stroke-dasharray: 5 8;
+}
+
+.trace-path {
+  stroke: var(--orange);
+  stroke-width: 3;
+  stroke-dasharray: 720;
+  stroke-dashoffset: 720;
+  animation: drawImpactTrace 4.8s ease-in-out infinite;
+}
+
+.trace-node {
+  fill: var(--paper);
+  stroke: var(--graphite);
+  stroke-width: 2;
+}
+
+.trace-node-two {
+  fill: var(--yellow);
+}
+
+.trace-node-three {
+  fill: var(--verdigris);
+}
+
+.trace-runner {
+  fill: var(--blue);
+  stroke: var(--paper);
+  stroke-width: 3;
+}
+
+.trace-labels {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: -7px;
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.trace-labels span:nth-child(2) {
+  text-align: center;
+}
+
+.trace-labels span:last-child {
+  text-align: right;
+}
+
+@keyframes drawImpactTrace {
+  0% {
+    stroke-dashoffset: 720;
+    opacity: 0.25;
+  }
+
+  42%,
+  82% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.25;
+  }
+}
 
 @media (min-width: 1181px) and (max-height: 900px) {
   .topbar {

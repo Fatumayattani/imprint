@@ -9,7 +9,6 @@ import {
   Droplets,
   ExternalLink,
   Orbit,
-  ScanLine,
   Wallet,
 } from "lucide-react";
 import {
@@ -474,15 +473,6 @@ export default function App() {
 
       <section className="hero-grid">
         <div className="hero-copy">
-          <motion.div
-            className="eyebrow"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <ScanLine size={16} />
-            Price impact, made accountable
-          </motion.div>
-
           <motion.h1
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
@@ -503,11 +493,37 @@ export default function App() {
             liquidity that absorbed them.
           </motion.p>
 
-          <div className="hero-proof">
-            <div><strong>51</strong><span>tests passing</span></div>
-            <div><strong>166</strong><span>ticks measured live</span></div>
-            <div><strong>10%</strong><span>LP release slices</span></div>
-          </div>
+          <motion.div
+            className="hero-impact-trace"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.32 }}
+            aria-label="Animated swap impact observation and resolution"
+          >
+            <svg viewBox="0 0 600 132" role="img" aria-hidden="true">
+              <path className="trace-baseline" d="M20 72 H580" />
+              <path
+                className="trace-path"
+                d="M20 72 C110 72 135 24 225 24 S335 104 420 72 S510 72 580 72"
+              />
+              <circle className="trace-node trace-node-one" cx="20" cy="72" r="7" />
+              <circle className="trace-node trace-node-two" cx="300" cy="57" r="7" />
+              <circle className="trace-node trace-node-three" cx="580" cy="72" r="7" />
+              <circle className="trace-runner" r="6">
+                <animateMotion
+                  dur="4.8s"
+                  repeatCount="indefinite"
+                  path="M20 72 C110 72 135 24 225 24 S335 104 420 72 S510 72 580 72"
+                />
+              </circle>
+            </svg>
+            <div className="trace-labels" aria-hidden="true">
+              <span>Swap</span>
+              <span>Observe</span>
+              <span>Resolve</span>
+            </div>
+          </motion.div>
+
         </div>
 
         <motion.section
