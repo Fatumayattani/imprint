@@ -603,10 +603,14 @@ export default function App() {
             </button>
           )}
 
-          <div className="transaction-notice" aria-live="polite">
-            <Orbit size={16} />
-            <span>{displayedNotice}</span>
-          </div>
+          {(!isConnected ||
+            chainId !== unichainSepolia.id ||
+            notice !== null) && (
+            <div className="transaction-notice" aria-live="polite">
+              <Orbit size={16} />
+              <span>{displayedNotice}</span>
+            </div>
+          )}
 
           {lastHash && (
             <a
