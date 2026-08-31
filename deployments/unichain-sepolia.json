@@ -1,0 +1,62 @@
+{
+  "network": "Unichain Sepolia",
+  "chainId": 1301,
+  "rpcUrl": "https://sepolia.unichain.org",
+  "deployer": "0x344d4ef6bd325495D932232D237dEf9F2fe95B3f",
+  "contracts": {
+    "poolManager": "0x00B036B58a818B1BC34d502D3fE730Db729e62AC",
+    "positionManager": "0xf969Aee60879C54bAAed9F3eD26147Db216Fd664",
+    "stateView": "0xc199f1072a74d4e905aba1a84d9a45e2546b6222",
+    "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    "protectedRouter": "0xA00B6237abE4606F9b20b57B67A82B5591F0667c",
+    "hook": "0x58e9eB947696c4EA9A80E65e901162E9BE3E00C0"
+  },
+  "assets": {
+    "currency0": {
+      "symbol": "USDC",
+      "address": "0x31d0220469e10c4E71834a79b1f276d740d3768F",
+      "decimals": 6
+    },
+    "currency1": {
+      "symbol": "WETH",
+      "address": "0x4200000000000000000000000000000000000006",
+      "decimals": 18
+    }
+  },
+  "pool": {
+    "poolId": "0xd5519a432b0a3bbb56ddf4b80b11488a7c49966138cad8618bed527d74af9a76",
+    "fee": 3000,
+    "tickSpacing": 60,
+    "initialTick": 193379,
+    "initialSqrtPriceX96": "1252707241875239655932069007848031",
+    "positionTokenId": "7867",
+    "liquidity": "189736659610",
+    "initialUsdc": "12000000",
+    "initialWeth": "2999999999998376"
+  },
+  "transactions": {
+    "hookDeployment": "0x3704f7e33a125667e0f84626c9f4f7bc67b85c95bfd65dc4dcc130dc79a37a9a",
+    "routerDeployment": "0x14c337f4dbcd233f7c327d19c7f1a1b31c9b8893d403ac8c2dc055071ccd3c81",
+    "poolLaunch": "0x34b6761d0327f49c769619404717ccd7c2e48486714dbb3a9e3239d6764f8720",
+    "protectedSwap": "0x1d89337f8e0371bb77cde25dee0725ba79e12fc1df97a12657c90c81bca223ad",
+    "receiptExpiry": "0x9c97659ce1403a8563988977daf4d0aff7b4f6698246a356d20a4db0b1e9547e",
+    "lpDonation": "0xe379fb3fa7712d45f9020dfff85248587b9c93cd56c915685ed13f11fb2a145d"
+  },
+  "liveLifecycle": {
+    "receiptId": "0x3c2b381036ed8bd07296afdc3485b64db9603338b62d0fbcb3dcfbfff7f7af55",
+    "amountIn": "100000",
+    "amountOut": "24719621147631",
+    "declaredBond": "20000",
+    "requiredBond": "12600",
+    "referenceTick": 193379,
+    "impactTick": 193213,
+    "status": "Expired",
+    "excessRefund": "7400",
+    "firstLpDonation": "1260",
+    "remainingDonationReserve": "11340"
+  },
+  "explorer": {
+    "hook": "https://unichain-sepolia.blockscout.com/address/0x58e9eb947696c4ea9a80e65e901162e9be3e00c0",
+    "protectedRouter": "https://unichain-sepolia.blockscout.com/address/0xa00b6237abe4606f9b20b57b67a82b5591f0667c"
+  }
+}
