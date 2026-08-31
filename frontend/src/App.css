@@ -821,6 +821,210 @@ footer > a {
   transform-origin: left center;
 }
 
+
+@media (min-width: 1181px) and (max-height: 900px) {
+  .topbar {
+    padding: 16px 0;
+  }
+
+  .hero-grid {
+    align-items: start;
+    min-height: 0;
+    padding: 36px 0 60px;
+    gap: 22px;
+  }
+
+  .hero-copy {
+    padding-top: 58px;
+    padding-right: 18px;
+  }
+
+  .eyebrow {
+    margin-bottom: 17px;
+  }
+
+  .hero-copy h1 {
+    max-width: 660px;
+    font-size: clamp(4rem, 5.15vw, 6rem);
+  }
+
+  .hero-intro {
+    margin-top: 24px;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  .hero-proof {
+    margin-top: 27px;
+  }
+
+  .hero-proof div {
+    min-width: 110px;
+    padding: 10px 12px;
+  }
+
+  .swap-card {
+    padding: 20px;
+  }
+
+  .card-heading {
+    margin-bottom: 16px;
+  }
+
+  .token-input,
+  .receive-panel {
+    padding: 13px;
+  }
+
+  .bond-panel {
+    margin-top: 13px;
+    padding: 13px;
+  }
+
+  .bond-track {
+    margin: 9px 0 8px;
+  }
+
+  .primary-action {
+    min-height: 48px;
+    margin-top: 13px;
+  }
+
+  .transaction-notice {
+    margin-top: 13px;
+  }
+
+  .impact-card-header {
+    padding: 20px 20px 0;
+  }
+
+  .trace-visual {
+    height: 176px;
+    margin-top: 8px;
+  }
+
+  .card-heading h2,
+  .impact-card h2 {
+    font-size: 1.55rem;
+  }
+
+  .token-input,
+  .receive-panel {
+    padding: 10px 12px;
+  }
+
+  .token-input > div,
+  .receive-panel > div {
+    margin: 5px 0 3px;
+  }
+
+  .token-input input {
+    font-size: 1.65rem;
+  }
+
+  .swap-arrow {
+    width: 32px;
+    height: 32px;
+    margin: -6px auto;
+  }
+
+  .bond-panel {
+    margin-top: 10px;
+    padding: 10px 12px;
+  }
+
+  .bond-title {
+    font-size: 0.72rem;
+  }
+
+  .bond-track {
+    height: 5px;
+    margin: 7px 0 6px;
+  }
+
+  .bond-panel p {
+    font-size: 0.62rem;
+    line-height: 1.35;
+  }
+
+  .primary-action {
+    min-height: 42px;
+    margin-top: 10px;
+  }
+
+  .transaction-notice {
+    margin-top: 10px;
+    font-size: 0.66rem;
+  }
+
+  .transaction-link {
+    margin-top: 7px;
+  }
+
+  .ring-one {
+    width: 72px;
+    height: 72px;
+  }
+
+  .ring-two {
+    width: 116px;
+    height: 116px;
+  }
+
+  .ring-three {
+    width: 166px;
+    height: 166px;
+  }
+
+  .trace-core {
+    width: 58px;
+    height: 58px;
+    font-size: 0.76rem;
+  }
+
+  .metric-grid div {
+    padding: 10px 12px;
+  }
+
+  .metric-grid span {
+    margin-bottom: 3px;
+    font-size: 0.56rem;
+  }
+
+  .metric-grid strong {
+    font-size: 0.8rem;
+  }
+
+  .reserve-strip {
+    padding: 12px;
+  }
+
+  .hero-grid {
+    padding-top: 20px;
+  }
+
+  .swap-card {
+    padding: 16px;
+  }
+
+  .card-heading {
+    margin-bottom: 12px;
+  }
+
+  .token-input,
+  .receive-panel {
+    padding: 8px 11px;
+  }
+
+  .bond-panel p {
+    line-height: 1.25;
+  }
+
+  .primary-action {
+    min-height: 40px;
+  }
+}
+
 @media (max-width: 1180px) {
   .hero-grid {
     grid-template-columns: 1fr 1fr;
