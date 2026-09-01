@@ -320,7 +320,7 @@ The complete machine-readable deployment record is available in [`deployments/un
 The deployed hook, router and pool have completed the full protected-swap, receipt, expiry and LP-donation lifecycle onchain.
 
 <p align="center">
-  <img src="./docs/assets/receipts.png" alt="Imprint onchain bond receipt showing its measured impact, required bond and final status" />
+  <img src="./docs/assets/expired.png" alt="Imprint onchain bond receipt showing its measured impact, required bond and final status" />
 </p>
 
 <p align="center">
