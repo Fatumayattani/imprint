@@ -24,6 +24,16 @@ Persistent movement earns the trader a refund. Reversed movement compensates the
 ![Unichain Sepolia](https://img.shields.io/badge/Unichain_Sepolia-1301-3157ff)
 ![Forge tests](https://img.shields.io/badge/51_tests-passing-12b886)
 
+<p align="center">
+  <a href="https://imprint-hq.netlify.app/">
+    <img src="./docs/assets/liveapp.png" alt="Imprint live application showing the protected USDC to WETH swap and live pool pressure" />
+  </a>
+</p>
+
+<p align="center">
+  <sub>The live Imprint interface connected to the public USDC/WETH pool on Unichain Sepolia.</sub>
+</p>
+
 ## Why Imprint
 
 Large swaps can move a pool’s price significantly. The market may confirm that movement, or the price may reverse after liquidity providers have absorbed the temporary pressure.
@@ -308,6 +318,14 @@ The complete machine-readable deployment record is available in [`deployments/un
 ## Verified live lifecycle
 
 The deployed hook, router and pool have completed the full protected-swap, receipt, expiry and LP-donation lifecycle onchain.
+
+<p align="center">
+  <img src="./docs/assets/receipts.png" alt="Imprint onchain bond receipt showing its measured impact, required bond and final status" />
+</p>
+
+<p align="center">
+  <sub>An Imprint bond receipt recovered directly from the deployed hook.</sub>
+</p>
 
 | Measurement | Recorded value |
 | --- | ---: |
